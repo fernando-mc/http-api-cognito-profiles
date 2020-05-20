@@ -3,6 +3,14 @@ service: http-api-python
 provider:
   name: aws
   runtime: python3.8
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:Query
+        - dynamodb:UpdateItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
   environment:
     DOMAIN_SUFFIX: custom-domain-${self:service}-${opt:stage, self:provider.stage}
     DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
@@ -28,7 +36,7 @@ functions:
             path: /user/profile
             authorizer: serviceAuthorizer
   createProfileInfo:
-    handler: profile.post
+    handler: profile.create
     events:
       - httpApi:
             method: POST

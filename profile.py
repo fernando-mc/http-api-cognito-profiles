@@ -1,28 +1,48 @@
+import boto3
+import os
 import json
 
+dynamodb = boto3.resource('dynamodb')
 
-def post(event, context):
-    body = event['body']
-    print(body)
-    new_body = json.loads(body)
-    result = {
-        "event_data": event, 
-        "body": new_body
+TABLE_NAME = os.environ['DYNAMODB_TABLE']
+table = dynamodb.Table(TABLE_NAME)
+
+
+def create(event, context):
+    print(event)
+    user_sub = event['requestContext']['authorizer']['claims']['sub']
+    profile_data = json.loads(event['body'])
+    item = {
+        'pk': 'USERS#ALL',
+        'sk': 'USER#' + user_sub,
+        'profile_data': profile_data
     }
-    response = {
-        "statusCode": 200,
-        "body": json.dumps(result)
+    table.put_item(
+        Item=item
+    )
+    return {
+        'statusCode': 200,
+        'headers': {'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps(item)
     }
-    return response
+
 
 def get(event, context):
     print(event)
-    body = {
-        "message": "Go Serverless v1.0! Your function executed successfully!",
-        "input": event
-    }
+    user_sub = event['requestContext']['authorizer']['claims']['sub']
+    pk = 'USERS#ALL'
+    sk = 'USER#' + user_sub
+    result = table.get_item(
+        Key={
+            'pk': pk,
+            'sk': sk
+        }
+    )
+    print(result)
+    item_info = result['Item']
     response = {
-        "statusCode": 200,
-        "body": json.dumps(body)
+        'statusCode': 200,
+        'headers': {'Access-Control-Allow-Origin': '*'},
+        'body': json.dumps(item_info)
     }
     return response
