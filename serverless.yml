@@ -3,6 +3,9 @@ service: http-api
 provider:
   name: aws
   runtime: python3.8 # OR: nodejs12.x
+  environment:
+    DOMAIN_SUFFIX: custom-domain-${self:service}-${opt:stage, self:provider.stage}
+    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -11,9 +14,6 @@ provider:
         - dynamodb:Query
         - dynamodb:UpdateItem
       Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
-  environment:
-    DOMAIN_SUFFIX: custom-domain-${self:service}-${opt:stage, self:provider.stage}
-    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
   httpApi:
     authorizers:
       serviceAuthorizer:
