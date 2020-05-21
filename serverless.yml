@@ -1,4 +1,4 @@
-service: http-api-python
+service: http-api
 
 provider:
   name: aws
