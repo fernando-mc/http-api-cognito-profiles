@@ -2,10 +2,10 @@ service: http-api
 
 provider:
   name: aws
-  runtime: python3.8 # OR: nodejs12.x
+  runtime: python3.8
   environment:
-    DOMAIN_SUFFIX: custom-domain-${self:service}-${opt:stage, self:provider.stage}
-    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+    DOMAIN_SUFFIX: custom-domain-${self:service}-${sls:stage}
+    DYNAMODB_TABLE: ${self:service}-${sls:stage}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -13,7 +13,7 @@ provider:
         - dynamodb:PutItem
         - dynamodb:Query
         - dynamodb:UpdateItem
-      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+      Resource: "arn:aws:dynamodb:${aws:region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
   httpApi:
     authorizers:
       serviceAuthorizer:
@@ -22,21 +22,21 @@ provider:
           Fn::Join:
           - ''
           - - 'https://cognito-idp.'
-            - '${opt:region, self:provider.region}'
+            - '${aws:region}'
             - '.amazonaws.com/'
             - Ref: serviceUserPool
         audience:
           - Ref: serviceUserPoolClient
 functions:
   getProfileInfo:
-    handler: profile.get
+    handler: user_profile.get
     events:
       - httpApi:
             method: GET
             path: /user/profile
             authorizer: serviceAuthorizer
   createProfileInfo:
-    handler: profile.create
+    handler: user_profile.create
     events:
       - httpApi:
             method: POST
@@ -79,7 +79,7 @@ resources:
     serviceUserPool:
       Type: AWS::Cognito::UserPool
       Properties:
-        UserPoolName: service-user-pool-${opt:stage, self:provider.stage}
+        UserPoolName: service-user-pool-${sls:stage}
         UsernameAttributes:
           - email
         AutoVerifiedAttributes:
@@ -87,7 +87,7 @@ resources:
     serviceUserPoolClient:
       Type: AWS::Cognito::UserPoolClient
       Properties:
-        ClientName: service-user-pool-client-${opt:stage, self:provider.stage}
+        ClientName: service-user-pool-client-${sls:stage}
         AllowedOAuthFlows:
           - implicit
         AllowedOAuthFlowsUserPoolClient: true
@@ -112,4 +112,11 @@ resources:
       Properties:
         UserPoolId: 
           Ref: serviceUserPool
-        Domain: service-user-pool-domain-${opt:stage, self:provider.stage}-${self:provider.environment.DOMAIN_SUFFIX}
+        Domain: service-user-pool-domain-${sls:stage}-${self:provider.environment.DOMAIN_SUFFIX}
+  Outputs:
+    UserPoolId:
+      Description: The Id of the UserPool
+      Value: !Ref serviceUserPool
+    UserPoolClientId:
+      Description: The Id of the UserPool
+      Value: !Ref serviceUserPoolClient
